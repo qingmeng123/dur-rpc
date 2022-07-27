@@ -12,7 +12,6 @@ import (
 	"dur-rpc/transfer"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"net"
 	"reflect"
 	"time"
@@ -79,7 +78,6 @@ func (c *Client) handleReq(reqRPC transfer.RPCData) transfer.RPCData {
 //尝试连接
 func (c *Client) Dial() error {
 	resp := c.handleReq(transfer.RPCData{Mid: c.mid})
-	fmt.Println("resp", resp)
 	if resp.Err != "" {
 		return transfer.ERRPRIVILEGE
 	}

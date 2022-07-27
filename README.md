@@ -67,7 +67,7 @@ if err!=nil{
 addr := "127.0.0.1:8080"
 conn , err := net.Dial("tcp", addr)
 if err != nil {
-   t.Error(err)
+   panic(err)
 }
 // 创建客户端
 cli := NewClient(conn)
