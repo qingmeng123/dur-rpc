@@ -22,13 +22,13 @@ func TestServer(t *testing.T) {
 	// 需要对interface可能产生的类型进行注册
 	addr := "127.0.0.1:8080"
 	// 创建服务端
-	mid := transfer.NewServiceMiddleware(func(ctx context.Context, params ...interface{}) error {
-		if params[0] == "hello" {
-			return nil
-		}
-		return transfer.ERRPRIVILEGE
-	})
-	srv := NewServer(addr, *mid)
+	//mid := transfer.NewServiceMiddleware(func(ctx context.Context, params ...interface{}) error {
+	//	if params[0] == "hello" {
+	//		return nil
+	//	}
+	//	return transfer.ERRPRIVILEGE
+	//})
+	srv := NewServer(addr)
 	// 将方法注册到服务端
 	err := srv.Register(&model.UserService{})
 	if err != nil {
@@ -48,8 +48,7 @@ func TestClient(t *testing.T) {
 	}
 	// 创建客户端
 	cli := NewClient(conn)
-	mid := transfer.NewClientMiddleware("hello")
-	err = cli.Register(new(model.UserService), *mid)
+	err = cli.Register(new(model.UserService))
 	if err != nil {
 		log.Println(err)
 		return

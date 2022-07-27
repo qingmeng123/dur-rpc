@@ -11,8 +11,8 @@ import (
 	"context"
 	"dur-rpc/transfer"
 	"encoding/gob"
+	"errors"
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"time"
@@ -22,32 +22,32 @@ import (
 type Client struct {
 	// 请求的服务名
 	service reflect.Value
-	conn net.Conn
-	mid  transfer.Middleware
+	conn    net.Conn
+	mid     transfer.Middleware
 }
 
 var defaultMiddleware = transfer.Middleware{
 	On:          false,
 	Interceptor: nil,
-	Params: nil,
+	Params:      nil,
 }
 
 // 创建客户端对象
 func NewClient(conn net.Conn) *Client {
-	return &Client{ conn: conn}
+	return &Client{conn: conn}
 }
 
 //注册服务
-func (c *Client) Register(req interface{},mids...transfer.Middleware)error  {
+func (c *Client) Register(req interface{}, mids ...transfer.Middleware) error {
 	gob.Register(req)
-	c.service=reflect.ValueOf(req)
-	mid:= defaultMiddleware
-	if len(mids)>0{
+	c.service = reflect.ValueOf(req)
+	if len(mids) > 0 {
 		gob.Register(mids[0])
-		mid=mids[0]
+		c.mid = mids[0]
+		return c.Dial()
 	}
-	c.mid=mid
-	return c.Dial()
+	c.mid = defaultMiddleware
+	return nil
 }
 
 //处理请求
@@ -79,15 +79,15 @@ func (c *Client) handleReq(reqRPC transfer.RPCData) transfer.RPCData {
 //尝试连接
 func (c *Client) Dial() error {
 	resp := c.handleReq(transfer.RPCData{Mid: c.mid})
-	fmt.Println("resp",resp)
-	if resp.Err!=""{
+	fmt.Println("resp", resp)
+	if resp.Err != "" {
 		return transfer.ERRPRIVILEGE
 	}
 	return nil
 }
 
 //调用方法
-func (c *Client) CallFunc(ctx context.Context, Num int, params ...interface{}) ([]interface{},error) {
+func (c *Client) CallFunc(ctx context.Context, Num int, params ...interface{}) ([]interface{}, error) {
 
 	respChan := make(chan transfer.RPCData, 5)
 	go func() {
@@ -95,22 +95,19 @@ func (c *Client) CallFunc(ctx context.Context, Num int, params ...interface{}) (
 	}()
 	respData := transfer.RPCData{}
 
-		select {
-		case respData = <-respChan:
-			if respData.Err != "" {
-				log.Println(respData.Err)
-				return nil,nil
-			}
-			return respData.Args,nil
-			//用户自定义超时时间
-		case <-ctx.Done():
-			<-respChan
-			return nil, transfer.ERRTIME
-			//默认3s超时
-		case <-time.After(3 * time.Second):
-			<-respChan
-			return nil, transfer.ERRTIME
+	select {
+	case respData = <-respChan:
+		if respData.Err != "" {
+			return nil, errors.New(respData.Err)
+		}
+		return respData.Args, nil
+		//用户自定义超时时间
+	case <-ctx.Done():
+		<-respChan
+		return nil, transfer.ERRTIME
+		//默认3s超时
+	case <-time.After(3 * time.Second):
+		<-respChan
+		return nil, transfer.ERRTIME
 	}
 }
-
-
