@@ -95,15 +95,27 @@ func (s *Server) handleRequest(reqData transfer.RPCData) (respData transfer.RPCD
 	for _, arg := range reqData.Args {
 		inArgs = append(inArgs, reflect.ValueOf(arg))
 	}
-	// 反射调用方法，传入参数
-	resp := method.Call(inArgs)
-	// 解析遍历执行结果，放到一个数组中
-	outArgs := make([]interface{}, 0, len(resp))
-	for _, o := range resp {
-		outArgs = append(outArgs, o.Interface())
-	}
-	respData.Num = reqData.Num
-	respData.Args = outArgs
+	// 反射调用方法，传入参数，起一个协程处理方法，避免方法本身panic
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				respData.Num = reqData.Num
+				respData.Err = transfer.ERRSERVICEFUNC.Error()
+			}
+		}()
+		resp := method.Call(inArgs)
+		// 解析遍历执行结果，放到一个数组中
+		outArgs := make([]interface{}, 0, len(resp))
+		for _, o := range resp {
+			outArgs = append(outArgs, o.Interface())
+		}
+		respData.Num = reqData.Num
+		respData.Args = outArgs
+	}()
+	wg.Wait()
 	return
 }
 

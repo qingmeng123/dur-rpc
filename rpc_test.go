@@ -47,8 +47,9 @@ func TestClient(t *testing.T) {
 		t.Error(err)
 	}
 	// 创建客户端
+	mid := transfer.NewClientMiddleware("hello")
 	cli := NewClient(conn)
-	err = cli.Register(new(model.UserService))
+	err = cli.Register(new(model.UserService), *mid)
 	if err != nil {
 		log.Println(err)
 		return
@@ -73,7 +74,7 @@ func TestClient(t *testing.T) {
 	}()
 
 	for i := 0; i < 5; i++ {
-		time.Sleep(time.Second)
+		time.Sleep(100 * time.Millisecond)
 		go func() {
 			for i := 0; i < 5; i++ {
 				res, err = cli.CallFunc(ctx, 0, i)
@@ -83,7 +84,6 @@ func TestClient(t *testing.T) {
 				}
 				fmt.Println(res[0], res[1])
 			}
-
 		}()
 	}
 }
@@ -116,7 +116,6 @@ func TestClient1(t *testing.T) {
 			log.Println(err)
 			return
 		}
-		time.Sleep(1 * time.Second)
 		fmt.Println(res[0], res[1])
 
 	}
